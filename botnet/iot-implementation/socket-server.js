@@ -76,5 +76,26 @@ const rl = readline.createInterface({
 // Event handler for CLI input
 rl.on('line', (input) => {
     const command = input.trim(); // Trim the input
+    if(command === 'list connections') {
+        // List all connected clients
+        console.log('Connected clients:');
+        clients.forEach((client, index) => {
+            console.log(`${index + 1}. ${client.remoteAddress}:${client.remotePort}`);
+        });
+        return;
+    }
     broadcast(command); // Broadcast the command to all clients
 });
+
+/* 
+
+  Valid commands:
+
+    close connections
+    list connections
+
+    [n] [ip]
+    3 192.168.87.57:3000
+    5 localhost:3000
+
+*/
