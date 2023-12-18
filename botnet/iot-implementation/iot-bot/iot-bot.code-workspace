@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"name": "iot-bot",
+			"path": "../../../../../../../../../Documents/PlatformIO/Projects/iot-bot"
+		},
+		{
+			"name": "iot-implementation",
+			"path": ".."
+		},
+		{
+			"name": "iot-bot",
+			"path": "."
+		}
+	],
+	"settings": {}
+}
