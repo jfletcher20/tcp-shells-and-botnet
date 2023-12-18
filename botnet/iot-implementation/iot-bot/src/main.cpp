@@ -1,22 +1,46 @@
 #include <Arduino.h>
 #include <WiFiClient.h>
+#include <HTTPClient.h>
 #include <WiFi.h>
 
 #define USER_BUTTON_PIN 0
 
-void connectToSocket(const String& ip);
+void connectToSocket();
 void connectToWiFi(const String& wifiName, const String& wifiPassword);
 void registerRequests(const String& message);
 void endSocket();
+
+WiFiClient client;
+
+const char *serverIp = "ipaddress", *serverPort = "3001";
 
 void setup() {
   Serial.begin(9600);
   pinMode(USER_BUTTON_PIN, INPUT_PULLUP);
   connectToWiFi("JIAOMI", "amJatcha");
-  connectToSocket("ip:3001");
+  connectToSocket();
 }
 
 void loop() {
+  // reset the socket if the user button is pressed; make sure  to add a debouncing delay
+
+  if (digitalRead(USER_BUTTON_PIN) == LOW) {
+    endSocket();
+    delay(1000);
+    connectToSocket();
+  }
+
+  if (client.available()) {
+    String message = client.readStringUntil('\n');
+    message.trim();
+    if (message == "close connections") {
+      Serial.println("Closing connection to server socket.");
+      endSocket();
+    } else {
+      Serial.println("Registering " + message + " request... ");
+      registerRequests(message);
+    }
+  }
 }
 
 void connectToWiFi(const String& wifiName, const String& wifiPassword) {
@@ -37,15 +61,20 @@ void connectToWiFi(const String& wifiName, const String& wifiPassword) {
   Serial.println(WiFi.localIP());
 }
 
-WiFiClient client;
-void connectToSocket(const String& ip) {
-  
-  // parse the port from the value $ip:$port in ip
-  int port = ip.substring(ip.indexOf(":") + 1).toInt();
+void connectToSocket() {
 
-  if (!client.connect(ip.substring(0, ip.indexOf(":")).c_str(), port)) {
+  int port = ((String) serverPort).toInt();
+  client.setTimeout(5);
+
+  // print message that we are starting to connect to socket at ip and port
+  Serial.print("Connecting to socket at ");
+  Serial.print(serverIp);
+  Serial.print(":");
+  Serial.println(port);
+
+  if (!client.connect(serverIp, port)) {
     Serial.print("Connection failed for ");
-    Serial.print(ip.substring(0, ip.indexOf(":")).c_str());
+    Serial.print(serverIp);
     Serial.print(":");
     Serial.println(port);
     return;
@@ -55,16 +84,23 @@ void connectToSocket(const String& ip) {
   
 }
 
+HTTPClient http;
 void registerRequests(const String& message) {
   int spaceIndex = message.indexOf(" ");
   if (spaceIndex != -1) {
     int numRequests = message.substring(0, spaceIndex).toInt();
     String ipAddress = message.substring(spaceIndex + 1);
-    
+    int port = message.substring(spaceIndex + 1).toInt();
+    http.begin(client, serverIp, port, "/", false);
     for (int i = 0; i < numRequests; i++) {
-      client.print("GET / HTTP/1.1\r\nHost: ");
-      client.print(ipAddress);
-      client.print("\r\nConnection: close\r\n\r\n");
+      int httpCode = http.GET();
+      if (httpCode > 0) {
+        Serial.printf("HTTP GET request to %s returned code %d\n", ipAddress.c_str(), httpCode);
+      } else {
+        Serial.printf("HTTP GET request to %s failed, error: %s\n", ipAddress.c_str(), http.errorToString(httpCode).c_str());
+      }
+      client.flush();
+      http.end();
     }
   }
 }

@@ -3,7 +3,7 @@ import requests
 
 # Connect to the server's socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect(('10.144.67.223', 3001))
+sock.connect(('localhost', 3001))
 
 while True:
     # Receive message from the server
